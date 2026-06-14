@@ -2,9 +2,11 @@
   "name": "flyte-devbox",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    }
   },
-  "postCreateCommand": "pip install flyte",
+  "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install flyte",
   "forwardPorts": [30080],
   "portsAttributes": {
     "30080": { "label": "Flyte Console" }
