@@ -4,9 +4,19 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "moby": false
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "helm": "none",
+      "minikube": "none"
     }
   },
   "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install flyte",
+  "postStartCommand": "nohup flyte start devbox > /tmp/devbox.log 2>&1 &",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
   "forwardPorts": [30080],
   "portsAttributes": {
     "30080": { "label": "Flyte Console" }
