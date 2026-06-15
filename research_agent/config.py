@@ -5,6 +5,7 @@ Everything provider-specific lives here. The rest of the code calls
 by changing a single env var, with no code edits.
 """
 
+import json
 import os
 
 from dotenv import load_dotenv
@@ -40,6 +41,46 @@ def get_model(**kwargs):
     if api_key and env_var and not os.getenv(env_var):
         os.environ[env_var] = api_key
     return init_chat_model(LLM_MODEL, **kwargs)
+
+
+def message_text(content) -> str:
+    """Flatten a LangChain message's `.content` into a plain string.
+
+    OpenAI/Anthropic usually return a `str`, but Gemini (and Anthropic tool use)
+    return a list of content blocks like ``[{"type": "text", "text": "..."}]``.
+    Collapsing here keeps provider quirks in one place, so the tasks can treat
+    every model's output as a string.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        return content.get("text", str(content))
+    if isinstance(content, list):
+        return "".join(
+            block["text"] if isinstance(block, dict) and "text" in block else str(block)
+            for block in content
+        )
+    return str(content)
+
+
+def parse_json(text: str):
+    """Parse JSON from an LLM response, tolerating ```` ```json ```` fences.
+
+    Returns the parsed object, or ``None`` if it can't be parsed (callers decide
+    the fallback). Some models — Gemini especially — wrap JSON in a markdown
+    code fence even when asked not to.
+    """
+    text = text.strip()
+    if text.startswith("```"):
+        newline = text.find("\n")
+        text = text[newline + 1:] if newline != -1 else text[3:]
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
+        text = text.strip()
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
 # Compute environment for every task in this pipeline.

@@ -17,7 +17,6 @@ Usage:
     flyte run workflow.py research_pipeline --query "Compare quantum computing approaches"
 """
 
-import json
 import os
 import base64
 import logging
@@ -28,7 +27,7 @@ import flyte
 import flyte.report
 from langchain_core.messages import HumanMessage
 
-from config import base_env, get_model
+from config import base_env, get_model, message_text, parse_json
 from models import TopicReport, QualityResult, PipelineResult
 from graph import build_pipeline_graph, build_research_subgraph
 
@@ -65,33 +64,11 @@ async def plan_topics(query: str, num_topics: int = 3) -> list[str]:
         f"Break this research question into exactly {num_topics} focused sub-topics. "
         f"Return ONLY a JSON array of strings, nothing else.\n\nQuestion: {query}"
     )
-    
-    # 1. Safely extract the raw text string from the response content wrapper
-    content = response.content
-    raw_text = ""
-
-    if isinstance(content, dict) and "text" in content:
-        raw_text = content["text"]
-    elif isinstance(content, list) and len(content) > 0:
-        if isinstance(content[0], dict) and "text" in content[0]:
-            raw_text = content[0]["text"]
-        else:
-            raw_text = str(content[0])
-    elif isinstance(content, str):
-        raw_text = content
-    else:
-        raw_text = str(content)
-
-    # 2. Parse the extracted text string into a native Python list
-    try:
-        topics = json.loads(raw_text)
-        if not isinstance(topics, list):
-            topics = [query]
-    except (json.JSONDecodeError, TypeError):
-        log.warning(f"Failed to parse LLM response as JSON. Raw text was: {raw_text}")
+    topics = parse_json(message_text(response.content))
+    if not isinstance(topics, list):
+        log.warning("Could not parse plan_topics JSON; falling back to the raw query.")
         topics = [query]
 
-    # Trim to requested number of topics
     topics = topics[:num_topics]
     log.info(f"Sub-topics: {topics}")
 
@@ -116,26 +93,9 @@ async def research_topic(topic: str, max_searches: int = 2) -> TopicReport:
 
     graph = build_research_subgraph(tavily_api_key=tavily_api_key, max_searches=max_searches)
     result = await graph.ainvoke({"messages": [HumanMessage(content=f"Research this topic: {topic}")]})
-    
-    # 1. Safely extract the content block
-    content = result["messages"][-1].content
-    
-    # 2. Flatten Gemini's list/dict response format into a single raw text string
-    if isinstance(content, list):
-        report = "".join(
-            block["text"] if isinstance(block, dict) and "text" in block else str(block)
-            for block in content
-        )
-    elif isinstance(content, dict) and "text" in content:
-        report = content["text"]
-    elif isinstance(content, str):
-        report = content
-    else:
-        report = str(content)
-
+    report = message_text(result["messages"][-1].content)
     log.info(f"[Research Task] Done: {topic}")
 
-    # 3. Now 'report' is a guaranteed string, so md_to_html and Flyte type checkers work perfectly
     await flyte.report.replace.aio(f"<h2>{topic}</h2>{md_to_html(report)}")
     await flyte.report.flush.aio()
 
@@ -164,30 +124,9 @@ async def synthesize(query: str, results: list[TopicReport]) -> str:
         f"Organize by theme, highlight connections between sub-topics, "
         f"and end with key takeaways."
     )
-    
-    # 1. Safely extract and flatten Gemini 3's block-list response content
-    content = response.content
-    synthesis_text = ""
-
-    if isinstance(content, list):
-        synthesis_text = "".join(
-            block["text"] if isinstance(block, dict) and "text" in block else str(block)
-            for block in content
-        )
-    elif isinstance(content, dict) and "text" in content:
-        synthesis_text = content["text"]
-    elif isinstance(content, str):
-        synthesis_text = content
-    else:
-        synthesis_text = str(content)
-
-    # 2. Clean it up and assign to your variable as a single valid string
-    synthesis = synthesis_text.strip()
-    
-    # This now counts text characters correctly instead of counting items in a list!
+    synthesis = message_text(response.content).strip()
     log.info(f"Synthesis complete: {len(synthesis)} chars")
 
-    # 3. Pass the clean string safely to your utilities and Flyte runner
     await flyte.report.replace.aio(f"<h2>Synthesis</h2>{md_to_html(synthesis)}")
     await flyte.report.flush.aio()
 
@@ -214,37 +153,12 @@ async def quality_check(query: str, synthesis: str) -> QualityResult:
         f'return an empty gaps list.'
     )
 
-    # 1. Extract and flatten Gemini 3.1 block-list structure into a single raw text string
-    content = response.content
-    raw_text = ""
-
-    if isinstance(content, list):
-        raw_text = "".join(
-            block["text"] if isinstance(block, dict) and "text" in block else str(block)
-            for block in content
-        )
-    elif isinstance(content, dict) and "text" in content:
-        raw_text = content["text"]
-    elif isinstance(content, str):
-        raw_text = content
-    else:
-        raw_text = str(content)
-
-    # 2. Clean markdown code block markers if the model wrapped the JSON string
-    raw_text = raw_text.strip()
-    if raw_text.startswith("```json"):
-        raw_text = raw_text[7:]
-    if raw_text.endswith("```"):
-        raw_text = raw_text[:-3]
-    raw_text = raw_text.strip()
-
-    # 3. Parse the guaranteed string object
-    try:
-        evaluation = json.loads(raw_text)
+    evaluation = parse_json(message_text(response.content))
+    if isinstance(evaluation, dict):
         score = evaluation.get("score", 8)
         gaps = evaluation.get("gaps", [])
-    except (json.JSONDecodeError, TypeError):
-        log.warning(f"Failed to parse quality evaluation JSON. Raw text was: {raw_text}")
+    else:
+        log.warning("Could not parse quality_check JSON; defaulting to score 8, no gaps.")
         score = 8
         gaps = []
 
