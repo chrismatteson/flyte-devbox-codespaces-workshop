@@ -173,9 +173,14 @@ def create_demo():
 def app_server():
     """Launch the Gradio app (called by Flyte on remote deployment)."""
     global _PASSTHROUGH
-    # init_passthrough() is what lets auth_metadata() forward the caller's identity.
-    flyte.init_passthrough(project=FLYTE_PROJECT, domain=FLYTE_DOMAIN, insecure=FLYTE_INSECURE)
-    _PASSTHROUGH = True
+    if REQUIRES_AUTH:
+        # Auth'd cluster (e.g. tryv2): forward the caller's identity via passthrough.
+        flyte.init_passthrough(project=FLYTE_PROJECT, domain=FLYTE_DOMAIN, insecure=FLYTE_INSECURE)
+        _PASSTHROUGH = True
+    else:
+        # No-auth devbox: run as the app's own in-cluster identity. This sets up
+        # the cluster transport (incl. plaintext) correctly on its own.
+        flyte.init_in_cluster(project=FLYTE_PROJECT, domain=FLYTE_DOMAIN)
     create_demo().launch(server_name="0.0.0.0", server_port=7860, share=False)
 
 
