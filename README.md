@@ -80,6 +80,25 @@ flyte create config \
 
 That writes `.flyte/config.yaml` in this directory.
 
+<details>
+<summary><b>Optional: use the hosted <code>tryv2</code> cluster instead of the devbox</b></summary>
+
+If you'd rather run against Union's hosted cluster (no local devbox needed), point the config there instead. Replace `<your-project>` with your project name on `tryv2`:
+
+```bash
+flyte create config \
+  --endpoint tryv2.hosted.unionai.cloud \
+  --project <your-project> \
+  --domain development
+```
+
+Notes:
+- No `--insecure` and no `--builder local` — it's a real, TLS-secured cluster that builds images for you.
+- Everything else in this walkthrough is identical; just skip the devbox steps and the `localhost:30080` references (use the cluster's own UI).
+- Create your secrets against the same project/domain (step 3), e.g. `--project <your-project>`.
+
+</details>
+
 ### 3. Create the secrets
 
 The tasks run on the cluster, so they need the keys as **Flyte secrets** (not just your local `.env`). You provide one LLM key plus Tavily:
@@ -122,26 +141,17 @@ flyte deploy app.py serving_env
 
 ---
 
-## Project structure
+## Extra Credit (optional)
+Point your favorite AI tool (Claude Code, Cursor, …) at the workshop MCP and paste a prompt. Pick one (or both):
+🧪 Be an ML engineer
 
-```
-.
-├── README.md                  # this file
-├── PREREQUISITES.md           # setup: Codespaces or local, keys, MCP
-├── .devcontainer/             # Codespaces: docker-in-docker, deps, auto-start devbox
-├── .vscode/mcp.json           # Flyte MCP for Copilot
-├── .mcp.json                  # Flyte MCP for Claude Code
-├── .cursor/mcp.json           # Flyte MCP for Cursor
-└── research_agent/
-    ├── config.py              # Flyte env + get_model() factory (the one place models live)
-    ├── models.py              # Pydantic data contracts
-    ├── graph.py               # LangGraph graphs: pipeline + ReAct subgraph
-    ├── workflow.py            # Flyte tasks: plan / research / synthesize / quality_check / orchestrator
-    ├── app.py                 # optional Gradio UI
-    ├── requirements.txt
-    ├── .env.example
-    └── tools/search.py        # Tavily web-search tool
-```
+Invent a few feature recipes for predicting [taco ratings / asteroid danger — you pick], train a model on each recipe in parallel, then write me a short report: which one you'd ship and why, with a recipe scoreboard and loss curves.
+
+🦾 MLE agent that writes its own training run
+
+Turn loose an ML-engineer agent on predicting [taco ratings / asteroid danger — your pick]: let it invent features, write and run its own training, read the score, and iterate to beat its last attempt. Then write me a short report: the score-per-iteration climb and the model it shipped.
+
+---
 
 ## How it works
 

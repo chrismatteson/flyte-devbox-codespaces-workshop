@@ -15,29 +15,7 @@ Get these done **before** the workshop. There are two ways to participate — pi
 
 ---
 
-## Option A — GitHub Codespaces (nothing to install)
-
-Best if you can't (or don't want to) install Docker locally.
-
-1. On the repo: **Code → Codespaces → Create codespace on main**.
-2. Wait for it to build. On creation the Codespace automatically:
-   - enables Docker-in-Docker and installs `kubectl`,
-   - installs the Python requirements,
-   - **starts the Flyte devbox in the background** (a local Kubernetes cluster in a container).
-3. Confirm the devbox is up (it takes a few minutes the first time):
-   ```bash
-   tail -f /tmp/devbox.log        # watch it come up; Ctrl-C to stop watching
-   curl -fsS http://localhost:30080/readyz && echo "  <-- devbox UP"
-   ```
-4. The Flyte UI is on forwarded port **30080** at path **`/v2`**. Open the **Ports** tab, find 30080, and browse to `…/v2`.
-
-> The devbox needs real resources. Create the Codespace on a **4-core / 16 GB** machine — the repo requests this automatically, but confirm it in the create dialog. A 2-core machine will hang while the cluster pods start.
-
-Then jump to the [main README](README.md) walkthrough.
-
----
-
-## Option B — Local (clone + run on your machine)
+## Option A — Local (clone + run on your machine)
 
 Best if you have Docker and want everything local.
 
@@ -74,6 +52,30 @@ Start the devbox (first run pulls a container image and boots Kubernetes — giv
 ```bash
 flyte start devbox
 ```
+
+Then jump to the [main README](README.md) walkthrough.
+
+---
+
+## Option B — GitHub Codespaces (nothing to install)
+
+Best if you can't (or don't want to) install Docker locally.
+
+1. On the repo: **Code → Codespaces → Create codespace on main**.
+2. Wait for it to build. On creation the Codespace automatically:
+   - enables Docker-in-Docker and installs `kubectl`,
+   - installs the Python requirements,
+   - **starts the Flyte devbox in the background** (a local Kubernetes cluster in a container).
+3. Confirm the devbox is up (it takes a few minutes the first time):
+   ```bash
+   tail -f /tmp/devbox.log        # watch it come up; Ctrl-C to stop watching
+   curl -fsS http://localhost:30080/readyz && echo "  <-- devbox UP"
+   ```
+4. The Flyte UI is on forwarded port **30080** at path **`/v2`**. Open the **Ports** tab, find 30080, and browse to `…/v2`.
+
+> **Tip:** Open the Codespace in **VS Code Desktop** (command palette → "Open in VS Code Desktop"). Forwarded ports then tunnel to real `localhost`, so terminal links keep their full path — and the ports stay private, so your LLM key is never exposed.
+
+> The devbox needs real resources. Create the Codespace on a **4-core / 16 GB** machine — the repo requests this automatically, but confirm it in the create dialog. A 2-core machine will hang while the cluster pods start.
 
 Then jump to the [main README](README.md) walkthrough.
 

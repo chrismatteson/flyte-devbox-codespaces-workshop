@@ -17,8 +17,9 @@
     "memory": "16gb",
     "storage": "32gb"
   },
-  "forwardPorts": [30080],
+  "forwardPorts": [30080, 7860],
   "portsAttributes": {
-    "30080": { "label": "Flyte Console" }
+    "30080": { "label": "Flyte Console" },
+    "7860": { "label": "Gradio App" }
   }
 }
