@@ -17,7 +17,6 @@ Usage:
     flyte run workflow.py research_pipeline --query "Compare quantum computing approaches"
 """
 
-import json
 import os
 import base64
 import logging
@@ -28,7 +27,7 @@ import flyte
 import flyte.report
 from langchain_core.messages import HumanMessage
 
-from config import base_env, get_model
+from config import base_env, get_model, message_text, parse_json
 from models import TopicReport, QualityResult, PipelineResult
 from graph import build_pipeline_graph, build_research_subgraph
 
@@ -65,9 +64,9 @@ async def plan_topics(query: str, num_topics: int = 3) -> list[str]:
         f"Break this research question into exactly {num_topics} focused sub-topics. "
         f"Return ONLY a JSON array of strings, nothing else.\n\nQuestion: {query}"
     )
-    try:
-        topics = json.loads(response.content)
-    except json.JSONDecodeError:
+    topics = parse_json(message_text(response.content))
+    if not isinstance(topics, list):
+        log.warning("Could not parse plan_topics JSON; falling back to the raw query.")
         topics = [query]
 
     topics = topics[:num_topics]
@@ -94,7 +93,7 @@ async def research_topic(topic: str, max_searches: int = 2) -> TopicReport:
 
     graph = build_research_subgraph(tavily_api_key=tavily_api_key, max_searches=max_searches)
     result = await graph.ainvoke({"messages": [HumanMessage(content=f"Research this topic: {topic}")]})
-    report = result["messages"][-1].content
+    report = message_text(result["messages"][-1].content)
     log.info(f"[Research Task] Done: {topic}")
 
     await flyte.report.replace.aio(f"<h2>{topic}</h2>{md_to_html(report)}")
@@ -125,7 +124,7 @@ async def synthesize(query: str, results: list[TopicReport]) -> str:
         f"Organize by theme, highlight connections between sub-topics, "
         f"and end with key takeaways."
     )
-    synthesis = response.content
+    synthesis = message_text(response.content).strip()
     log.info(f"Synthesis complete: {len(synthesis)} chars")
 
     await flyte.report.replace.aio(f"<h2>Synthesis</h2>{md_to_html(synthesis)}")
@@ -154,11 +153,12 @@ async def quality_check(query: str, synthesis: str) -> QualityResult:
         f'return an empty gaps list.'
     )
 
-    try:
-        evaluation = json.loads(response.content)
+    evaluation = parse_json(message_text(response.content))
+    if isinstance(evaluation, dict):
         score = evaluation.get("score", 8)
         gaps = evaluation.get("gaps", [])
-    except json.JSONDecodeError:
+    else:
+        log.warning("Could not parse quality_check JSON; defaulting to score 8, no gaps.")
         score = 8
         gaps = []
 
