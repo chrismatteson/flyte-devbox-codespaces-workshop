@@ -47,7 +47,6 @@ def get_model(**kwargs):
 base_env = flyte.TaskEnvironment(
     name="research-pipeline-env",
     image=flyte.Image.from_debian_base(
-        registry="localhost:30000"
     ).with_requirements("requirements.txt"),
     # LLM_MODEL is your choice (not a secret) — bake it into the task so the
     # cluster uses the same provider you picked locally. The keys ARE secrets.
