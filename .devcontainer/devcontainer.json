@@ -10,7 +10,7 @@
       "minikube": "none"
     }
   },
-  "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install flyte",
+  "postCreateCommand": "python -m pip install --upgrade pip && python -m pip install -r research_agent/requirements.txt",
   "postStartCommand": "nohup flyte start devbox > /tmp/devbox.log 2>&1 &",
   "hostRequirements": {
     "cpus": 4,

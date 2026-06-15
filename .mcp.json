@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flyte": {
+      "type": "http",
+      "url": "https://flyte-mcp.apps.demo.hosted.unionai.cloud/flyte-mcp/mcp"
+    }
+  }
+}

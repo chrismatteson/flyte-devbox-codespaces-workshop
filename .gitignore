@@ -1,0 +1,19 @@
+# Secrets / local config
+.env
+**/.env
+.flyte/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Gradio
+**/flagged/
+
+# OS / editor
+.DS_Store
+Thumbs.db

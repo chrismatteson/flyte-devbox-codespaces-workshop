@@ -1,0 +1,11 @@
+langgraph>=1.0.7
+langchain>=0.3
+langchain-openai
+langchain-anthropic
+# For Gemini, also add: langchain-google-genai
+tavily-python
+flyte[tui]>=2.0
+markdown
+python-dotenv
+ipython
+gradio
